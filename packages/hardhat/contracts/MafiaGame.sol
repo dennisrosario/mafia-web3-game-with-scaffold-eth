@@ -11,6 +11,7 @@ contract MafiaGame {
 	}
 	enum GameState {
 		Waiting,
+		AssigningRoles,
 		Night,
 		Day,
 		Finished
@@ -27,10 +28,13 @@ contract MafiaGame {
 	address[] public playerAddresses;
 	GameState public currentState;
 	uint public startTime;
-	uint public nightDuration = 30 seconds;
-	uint public dayDuration = 60 seconds;
+	uint public stageDuration;
 	address public lastKilled;
 	Treasury public treasury;
+
+	// Voting variables
+	mapping(address => uint) public votes; // Track votes for each player
+	uint public totalVotes;
 
 	// Events
 	event GameStarted();
@@ -39,6 +43,8 @@ contract MafiaGame {
 	event GameEnded(address[] winners);
 	event AssassinAction(address indexed assassin, address indexed target);
 	event PlayerVoted(address indexed voter, address indexed target);
+	event NightNarration(address indexed killer, address indexed victim);
+	event DayNarration(address indexed victim);
 
 	modifier onlyAlive() {
 		require(players[msg.sender].isAlive, "You are dead!");
@@ -72,11 +78,15 @@ contract MafiaGame {
 		treasury.deposit{ value: msg.value }();
 
 		if (playerAddresses.length == 4) {
-			assignRoles();
-			startTime = block.timestamp;
-			currentState = GameState.Night;
-			emit GameStarted();
+			startGame();
 		}
+	}
+
+	function startGame() private {
+		currentState = GameState.AssigningRoles;
+		startTime = block.timestamp;
+		emit GameStarted();
+		assignRoles();
 	}
 
 	function assignRoles() private {
@@ -86,12 +96,16 @@ contract MafiaGame {
 		players[playerAddresses[2]].role = Role.Police;
 		players[playerAddresses[3]].role = Role.Citizen;
 
-		for (uint i = 0; i < playerAddresses.length; i++) {
+		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			emit RoleAssigned(
 				playerAddresses[i],
 				players[playerAddresses[i]].role
 			);
 		}
+
+		// Move to the night phase after role assignment
+		currentState = GameState.Night;
+		startTime = block.timestamp; // Reset start time for the night phase
 	}
 
 	function assassinKill(
@@ -105,15 +119,16 @@ contract MafiaGame {
 		lastKilled = target; // Store last killed address
 		emit PlayerKilled(target);
 		emit AssassinAction(msg.sender, target);
+		emit NightNarration(msg.sender, target);
 
-		// Check for game end conditions
-		checkForGameEnd();
+		// Move to day phase
+		endNight();
 	}
 
-	function endNight() external onlyInState(GameState.Night) {
-		// Logic to transition from night to day phase
+	function endNight() private {
 		currentState = GameState.Day;
-		// Additional logic can be added here to handle end of night actions
+		startTime = block.timestamp; // Reset start time for the day phase
+		emit DayNarration(lastKilled);
 	}
 
 	function voteToKill(
@@ -121,18 +136,45 @@ contract MafiaGame {
 	) external onlyAlive onlyInState(GameState.Day) {
 		require(!players[target].hasVoted, "Player has already voted!");
 		players[target].hasVoted = true;
+		votes[target]++;
+		totalVotes++;
 		emit PlayerVoted(msg.sender, target);
 
-		// Logic to tally votes and handle the killing of the target player can be implemented here
-		// For example, once a majority is reached, call a kill function or a game end check
+		// Check if voting is over
+		if (totalVotes >= 3) {
+			// Majority required to kill (3 votes in a 4-player game)
+			executeVote(target);
+		}
+	}
+
+	function executeVote(address target) private {
+		require(players[target].isAlive, "Target is already dead!");
+
+		// Kill the target
+		players[target].isAlive = false;
+		emit PlayerKilled(target);
+		emit DayNarration(target);
+
+		// Check for winners
+		checkForGameEnd();
+
+		// Reset voting for the next day
+		resetVoting();
+	}
+
+	function resetVoting() private {
+		for (uint256 i = 0; i < playerAddresses.length; i++) {
+			players[playerAddresses[i]].hasVoted = false; // Reset voting status for the next day
+		}
+		totalVotes = 0; // Reset total votes
 	}
 
 	function checkForGameEnd() private {
-		uint aliveCount = 0;
-		uint assassinCount = 0;
-		uint townCount = 0; // Track number of Town members (Police + Citizen)
+		uint256 aliveCount = 0;
+		uint256 assassinCount = 0;
+		uint256 townCount = 0; // Track number of Town members (Police + Citizen)
 
-		for (uint i = 0; i < playerAddresses.length; i++) {
+		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			if (players[playerAddresses[i]].isAlive) {
 				aliveCount++;
 				if (players[playerAddresses[i]].role == Role.Assassin) {
@@ -195,6 +237,11 @@ contract MafiaGame {
 			revert("No winner found");
 		}
 
+		// Resize the array if only one winner is found
+		if (aliveCount < 2) {
+			return winners; // Return only the single winner
+		}
+
 		// Return the winners (up to 2)
 		return winners;
 	}
@@ -202,5 +249,23 @@ contract MafiaGame {
 	function withdrawPrize() external onlyInState(GameState.Finished) {
 		// Logic to withdraw the prize
 		treasury.withdraw(payable(msg.sender));
+	}
+
+	// Function to check the current stage duration
+	function currentStageDuration() public view returns (uint) {
+		if (currentState == GameState.AssigningRoles) {
+			return 30 seconds;
+		} else if (currentState == GameState.Night) {
+			return 30 seconds;
+		} else if (currentState == GameState.Day) {
+			return 60 seconds;
+		} else {
+			return 0; // No active stage
+		}
+	}
+
+	// Function to check if the current stage has ended
+	function hasStageEnded() public view returns (bool) {
+		return (block.timestamp >= startTime + currentStageDuration());
 	}
 }
