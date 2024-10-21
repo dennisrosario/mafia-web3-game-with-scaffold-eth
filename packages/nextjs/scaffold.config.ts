@@ -1,6 +1,7 @@
 import * as chains from "viem/chains";
 
 export type ScaffoldConfig = {
+  joiningFee: number;
   targetNetworks: readonly chains.Chain[];
   pollingInterval: number;
   alchemyApiKey: string;
@@ -9,6 +10,8 @@ export type ScaffoldConfig = {
 };
 
 const scaffoldConfig = {
+  joiningFee: 0.1,
+
   // The networks on which your DApp is live
   targetNetworks: [chains.hardhat],
 

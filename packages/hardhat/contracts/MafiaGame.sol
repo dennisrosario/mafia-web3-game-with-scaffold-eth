@@ -72,10 +72,14 @@ contract MafiaGame {
 	function joinGame() external payable onlyInState(GameState.Waiting) {
 		require(msg.value == 0.1 ether, "Must pay 0.1 ETH to join");
 		require(playerAddresses.length < 4, "Game is full");
+		require(
+			players[msg.sender].playerAddress == address(0),
+			"Player has already joined"
+		);
 
 		players[msg.sender] = Player(msg.sender, Role.Citizen, true, false);
 		playerAddresses.push(msg.sender);
-		treasury.deposit{ value: msg.value }();
+		treasury.deposit{ value: msg.value }(msg.sender);
 
 		if (playerAddresses.length == 4) {
 			startGame();
