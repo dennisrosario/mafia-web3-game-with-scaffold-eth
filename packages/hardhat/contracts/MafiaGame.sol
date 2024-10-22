@@ -272,4 +272,24 @@ contract MafiaGame {
 	function hasStageEnded() public view returns (bool) {
 		return (block.timestamp >= startTime + currentStageDuration());
 	}
+
+	// Function to get the count of joined players
+	function getPlayerCount() public view returns (uint256) {
+		return playerAddresses.length;
+	}
+
+	// Function to get all joined players and player addresses
+	function getAllPlayers()
+		public
+		view
+		returns (address[] memory, Player[] memory)
+	{
+		Player[] memory allPlayers = new Player[](playerAddresses.length);
+
+		for (uint256 i = 0; i < playerAddresses.length; i++) {
+			allPlayers[i] = players[playerAddresses[i]];
+		}
+
+		return (playerAddresses, allPlayers);
+	}
 }

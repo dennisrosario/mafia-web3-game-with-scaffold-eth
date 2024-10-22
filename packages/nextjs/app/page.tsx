@@ -1,10 +1,10 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { parseUnits } from "viem";
-import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   ContractInput,
@@ -17,95 +17,109 @@ import {
 import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useNetworkColor } from "~~/hooks/scaffold-eth";
 import { useTransactor } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import scaffoldConfig from "~~/scaffold.config";
 import { Contract, ContractCodeStatus, ContractName, contracts } from "~~/utils/scaffold-eth/contract";
 
 const Home: NextPage = () => {
+  const [joined, setJoined] = useState(false);
   const { address: connectedAddress } = useAccount();
-  const { data: deployedContractData, isLoading: deployedContractLoading } = useDeployedContractInfo("MafiaGame");
+  const { data: mafiaContract, isLoading: deployedContractLoading } = useDeployedContractInfo("MafiaGame");
   const { data: result, isPending, writeContractAsync } = useWriteContract();
-  const [refreshDisplayVariables, triggerRefreshDisplayVariables] = useReducer(value => !value, false);
   const writeTxn = useTransactor();
+  const { targetNetwork } = useTargetNetwork();
 
-  const handleWrite = async () => {
-    if (writeContractAsync && deployedContractData?.address) {
+  const {
+    data: allPlayerData = [],
+    isFetching,
+    refetch: refetchJoinedPlayers,
+    error,
+  } = useReadContract({
+    address: mafiaContract?.address,
+    functionName: "getAllPlayers",
+    abi: mafiaContract?.abi,
+    chainId: targetNetwork.id,
+  });
+
+  const handleJoin = async () => {
+    if (writeContractAsync && mafiaContract?.address) {
       try {
         const makeWriteWithParams = () =>
           writeContractAsync({
-            address: deployedContractData.address,
+            address: mafiaContract.address,
             functionName: "joinGame",
-            abi: deployedContractData.abi,
+            abi: mafiaContract.abi,
             value: BigInt(parseUnits(scaffoldConfig.joiningFee.toString(), 18)),
           });
         await writeTxn(makeWriteWithParams);
-        triggerRefreshDisplayVariables();
+        setJoined(true);
       } catch (e: any) {
-        console.error("⚡️ ~ file: WriteOnlyFunctionForm.tsx:handleWrite ~ error", e);
+        console.error("⚡️ ~ file: page.tsx:handleJoin ~ error", e);
       }
     }
   };
 
+  useEffect(() => {
+    if (typeof allPlayerData === "object" && allPlayerData?.length) {
+      // Check if the connected address is in the player addresses
+      console.log({ allPlayerData });
+      allPlayerData[0]?.includes(connectedAddress) ? setJoined(true) : setJoined(false);
+    }
+  }, [allPlayerData, connectedAddress]);
+
   return (
     <>
-      <div className="flex items-center flex-col flex-grow pt-64">
+      <div className="flex items-center flex-col flex-grow pt-48">
         <div className="px-5">
           <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Mafia Game</span>
+            <span className="block text-8xl mb-2">Welcome to</span>
+            <span className="block text-9xl font-bold">Mafia Game</span>
           </h1>
 
-          <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
-            <button
-              className="btn btn-secondary btn-sm font-light hover:border-transparent bg-base-100 hover:bg-secondary"
-              onClick={handleWrite}
-            >
-              JOIN GAME
-            </button>
-            {/* <p className="my-2 font-medium">Connected Address:</p>
+          {!joined && (
+            <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
+              <button
+                className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
+                onClick={handleJoin}
+              >
+                JOIN GAME
+              </button>
+              {/* <p className="my-2 font-medium">Connected Address:</p>
             <Address address={connectedAddress} /> */}
-          </div>
-          {/* <p className="text-center text-lg">
-            Get started by editing{" "}
+            </div>
+          )}
+          <p className="text-center text-lg">
             <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
+              {joined
+                ? `Please wait until the game started(need 4 players to Join)`
+                : `Get started by paying just ${scaffoldConfig.joiningFee} ETH`}
             </code>
           </p>
           <p className="text-center text-lg">
-            Edit your smart contract{" "}
             <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
+              The winning prize will be paid after game ended automatically!
             </code>
-          </p> */}
+          </p>
         </div>
 
-        {/* <div className="flex-grow w-full mt-16 px-8 py-12">
+        <div className="flex-grow w-full mt-16 px-8 py-12">
           <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
+            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
               <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
+              <p>Joined Players: {allPlayerData[0]?.length}</p>
+              {allPlayerData[1]?.map((player, i) => (
+                <div key={i}>
+                  <Address key={i} address={player.playerAddress} />
+                  {player.playerAddress == connectedAddress && "(you)"}
+                </div>
+              ))}
             </div>
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
               <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
+              <p>Game State</p>
             </div>
           </div>
-        </div> */}
+        </div>
       </div>
     </>
   );

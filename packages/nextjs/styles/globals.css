@@ -30,3 +30,9 @@ p {
 .btn.btn-ghost {
   @apply shadow-none;
 }
+
+.bg-mafia {
+  background-image: url("~~/public/bg.jpg");
+  background-size: cover;
+  background-position: top;
+}
