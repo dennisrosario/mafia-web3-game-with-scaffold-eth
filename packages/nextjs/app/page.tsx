@@ -21,6 +21,8 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import scaffoldConfig from "~~/scaffold.config";
 import { Contract, ContractCodeStatus, ContractName, contracts } from "~~/utils/scaffold-eth/contract";
 
+const GameState = ["Waiting", "AssigningRoles", "Night", "Day", "Finished"];
+
 const Home: NextPage = () => {
   const [joined, setJoined] = useState(false);
   const { address: connectedAddress } = useAccount();
@@ -29,14 +31,16 @@ const Home: NextPage = () => {
   const writeTxn = useTransactor();
   const { targetNetwork } = useTargetNetwork();
 
-  const {
-    data: allPlayerData = [],
-    isFetching,
-    refetch: refetchJoinedPlayers,
-    error,
-  } = useReadContract({
+  const { data: allPlayerData = [], refetch: refetchJoinedPlayers } = useReadContract({
     address: mafiaContract?.address,
     functionName: "getAllPlayers",
+    abi: mafiaContract?.abi,
+    chainId: targetNetwork.id,
+  });
+
+  const { data: gameState = 0, refetch: refetchGameState } = useReadContract({
+    address: mafiaContract?.address,
+    functionName: "currentState",
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
   });
@@ -53,6 +57,8 @@ const Home: NextPage = () => {
           });
         await writeTxn(makeWriteWithParams);
         setJoined(true);
+        refetchJoinedPlayers();
+        refetchGameState();
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleJoin ~ error", e);
       }
@@ -76,7 +82,7 @@ const Home: NextPage = () => {
             <span className="block text-9xl font-bold">Mafia Game</span>
           </h1>
 
-          {!joined && (
+          {!joined && connectedAddress && (
             <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
               <button
                 className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
@@ -97,7 +103,7 @@ const Home: NextPage = () => {
           </p>
           <p className="text-center text-lg">
             <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              The winning prize will be paid after game ended automatically!
+              The winning prize will be paid after the game ended automatically!
             </code>
           </p>
         </div>
@@ -117,6 +123,7 @@ const Home: NextPage = () => {
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
               <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
               <p>Game State</p>
+              {GameState[gameState]}
             </div>
           </div>
         </div>
