@@ -1,30 +1,21 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { NextPage } from "next";
-import { parseUnits } from "viem";
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { Address as AddressType, parseUnits } from "viem";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import {
-  ContractInput,
-  TxReceipt,
-  getFunctionInputKey,
-  getInitialFormState,
-  getParsedContractFunctionArgs,
-  transformAbiFunction,
-} from "~~/app/debug/_components/contract";
 import { Address } from "~~/components/scaffold-eth";
-import { useDeployedContractInfo, useNetworkColor } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import scaffoldConfig from "~~/scaffold.config";
-import { Contract, ContractCodeStatus, ContractName, contracts } from "~~/utils/scaffold-eth/contract";
-
-const GameState = ["Waiting", "AssigningRoles", "Night", "Day", "Finished"];
+import { notification } from "~~/utils/scaffold-eth";
 
 const Home: NextPage = () => {
   const [joined, setJoined] = useState(false);
+  const [selectPlayers, setSelectPlayers] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState("");
   const { address: connectedAddress } = useAccount();
   const { data: mafiaContract, isLoading: deployedContractLoading } = useDeployedContractInfo("MafiaGame");
   const { data: result, isPending, writeContractAsync } = useWriteContract();
@@ -38,7 +29,7 @@ const Home: NextPage = () => {
     chainId: targetNetwork.id,
   });
 
-  const { data: gameState = 0, refetch: refetchGameState } = useReadContract({
+  const { data: currentState = 0, refetch: refetchCurrentState } = useReadContract({
     address: mafiaContract?.address,
     functionName: "currentState",
     abi: mafiaContract?.abi,
@@ -58,9 +49,28 @@ const Home: NextPage = () => {
         await writeTxn(makeWriteWithParams);
         setJoined(true);
         refetchJoinedPlayers();
-        refetchGameState();
+        refetchCurrentState();
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleJoin ~ error", e);
+      }
+    }
+  };
+
+  const handleAssassinKill = async (target: AddressType) => {
+    if (writeContractAsync && mafiaContract?.address) {
+      try {
+        const makeWriteWithParams = () =>
+          writeContractAsync({
+            address: mafiaContract.address,
+            functionName: "assassinKill",
+            abi: mafiaContract.abi,
+            args: [target],
+          });
+        await writeTxn(makeWriteWithParams);
+        refetchJoinedPlayers();
+        refetchCurrentState();
+      } catch (e: any) {
+        console.error("⚡️ ~ file: page.tsx:handleAssassinKill ~ error", e);
       }
     }
   };
@@ -68,10 +78,21 @@ const Home: NextPage = () => {
   useEffect(() => {
     if (typeof allPlayerData === "object" && allPlayerData?.length) {
       // Check if the connected address is in the player addresses
-      console.log({ allPlayerData });
       allPlayerData[0]?.includes(connectedAddress) ? setJoined(true) : setJoined(false);
     }
   }, [allPlayerData, connectedAddress]);
+
+  useEffect(() => {
+    if (currentState && currentState === 2) {
+      notification.info("Game Started");
+    }
+  }, [currentState]);
+
+  console.log(
+    allPlayerData[1]?.find(player => {
+      return player.playerAddress == connectedAddress && player.role === scaffoldConfig.roles.Assassin;
+    }),
+  );
 
   return (
     <>
@@ -94,10 +115,25 @@ const Home: NextPage = () => {
             <Address address={connectedAddress} /> */}
             </div>
           )}
+
+          {joined &&
+            currentState === 2 &&
+            allPlayerData[1]?.find(player => {
+              return player.playerAddress == connectedAddress && player.role === scaffoldConfig.roles.Assassin;
+            }) !== undefined && (
+              <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
+                <button
+                  className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
+                  onClick={() => setSelectPlayers(true)}
+                >
+                  Kill the other players!
+                </button>
+              </div>
+            )}
           <p className="text-center text-lg">
             <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
               {joined
-                ? `Please wait until the game started(need 4 players to Join)`
+                ? `Please wait until the game started (need 4 players to Join)`
                 : `Get started by paying just ${scaffoldConfig.joiningFee} ETH`}
             </code>
           </p>
@@ -108,25 +144,28 @@ const Home: NextPage = () => {
           </p>
         </div>
 
-        <div className="flex-grow w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>Joined Players: {allPlayerData[0]?.length}</p>
-              {allPlayerData[1]?.map((player, i) => (
-                <div key={i}>
-                  <Address key={i} address={player.playerAddress} />
-                  {player.playerAddress == connectedAddress && "(you)"}
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>Game State</p>
-              {GameState[gameState]}
+        {connectedAddress && (
+          <div className="flex-grow w-full mt-16 px-8 py-12">
+            <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
+              <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
+                <BugAntIcon className="h-8 w-8 fill-secondary" />
+                <p>Joined Players: {allPlayerData[0]?.length}</p>
+                {allPlayerData[1]?.map((player, i) => (
+                  <div key={i}>
+                    <Address key={i} address={player.playerAddress} />
+                    {player.playerAddress == connectedAddress && "(you)"}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
+                <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
+                <p>Game State</p>
+                <p>{scaffoldConfig.gameState[currentState]?.state}</p>
+                <p>{scaffoldConfig.gameState[currentState]?.desc}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

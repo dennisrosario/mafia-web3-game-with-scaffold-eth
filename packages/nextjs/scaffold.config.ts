@@ -2,6 +2,9 @@ import * as chains from "viem/chains";
 
 export type ScaffoldConfig = {
   joiningFee: number;
+  gameState: object;
+  roles: object;
+  playerType: object;
   targetNetworks: readonly chains.Chain[];
   pollingInterval: number;
   alchemyApiKey: string;
@@ -11,6 +14,35 @@ export type ScaffoldConfig = {
 
 const scaffoldConfig = {
   joiningFee: 0.1,
+
+  roles: {
+    Assassin: 0,
+    Police: 1,
+    Citizen: 2,
+  },
+
+  gameState: [
+    {
+      state: "Waiting",
+      desc: "Please wait till the other players to join.",
+    },
+    {
+      state: "AssigningRoles",
+      desc: "Assigning roles random bases.",
+    },
+    {
+      state: "Night",
+      desc: "Assassins to kill the other players.",
+    },
+    {
+      state: "Day",
+      desc: "Vote to decide the player to die.",
+    },
+    {
+      state: "Finished",
+      desc: "Waiting for the winner determination.",
+    },
+  ],
 
   // The networks on which your DApp is live
   targetNetworks: [chains.hardhat],
