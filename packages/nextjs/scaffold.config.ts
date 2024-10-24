@@ -4,7 +4,6 @@ export type ScaffoldConfig = {
   joiningFee: number;
   gameState: object;
   roles: object;
-  playerType: object;
   targetNetworks: readonly chains.Chain[];
   pollingInterval: number;
   alchemyApiKey: string;
@@ -15,11 +14,7 @@ export type ScaffoldConfig = {
 const scaffoldConfig = {
   joiningFee: 0.1,
 
-  roles: {
-    Assassin: 0,
-    Police: 1,
-    Citizen: 2,
-  },
+  roles: ["Assassin", "Police", "Citizen"],
 
   gameState: [
     {
@@ -32,7 +27,7 @@ const scaffoldConfig = {
     },
     {
       state: "Night",
-      desc: "Assassins to kill the other players.",
+      desc: "Assasins’s turn - choose somebody to kill - 15 seconds.",
     },
     {
       state: "Day",

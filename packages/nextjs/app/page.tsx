@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Key, useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { Address as AddressType, parseUnits } from "viem";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { SelectPlayerModal } from "~~/components/SelectPlayerModal";
+import { SelectPlayerModal } from "~~/components/MafiaGame";
 import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useTargetNetwork, useTransactor } from "~~/hooks/scaffold-eth";
 import scaffoldConfig from "~~/scaffold.config";
@@ -15,6 +15,7 @@ const Home: NextPage = () => {
   const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
   const [playerAddresses, setPlayerAddresses] = useState([]);
+  const [currentPlayer, setCurrentPlayer] = useState({});
   const [selectPlayers, setSelectPlayers] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
   const { address: connectedAddress } = useAccount();
@@ -23,10 +24,7 @@ const Home: NextPage = () => {
   const writeTxn = useTransactor();
   const { targetNetwork } = useTargetNetwork();
 
-  const {
-    data: players = [{ playerAddresses: String, role: Number, isAlive: Boolean, hasVoted: Boolean }],
-    refetch: refetchPlayers,
-  } = useReadContract({
+  const { data: players = [], refetch: refetchPlayers } = useReadContract({
     address: mafiaContract?.address,
     functionName: "getAllPlayers",
     abi: mafiaContract?.abi,
@@ -70,7 +68,7 @@ const Home: NextPage = () => {
             address: mafiaContract?.address,
             functionName: "assassinKill",
             abi: mafiaContract?.abi,
-            args: [target],
+            args: [selectedAddress],
           });
         await writeTxn(makeWriteWithParams);
         refetchState();
@@ -85,13 +83,25 @@ const Home: NextPage = () => {
     await refetchCurrentState();
   };
 
-  console.log({ playerAddresses, players });
+  const isAssassin = (_address: AddressType | undefined) => {
+    return (
+      players?.find((player: { playerAddress: string; role: number }) => {
+        return player.playerAddress == _address && scaffoldConfig.roles[player.role] === "Assassin";
+      }) !== undefined
+    );
+  };
 
   useEffect(() => {
     if (typeof players === "object" && players?.length) {
       const addresses = players?.map((player: { playerAddress: any }) => player.playerAddress);
       setPlayerAddresses(addresses);
       addresses.includes(connectedAddress) ? setJoined(true) : setJoined(false);
+
+      setCurrentPlayer(
+        (players?.filter(
+          (player: { playerAddress: string | undefined }) => player.playerAddress === connectedAddress,
+        ))[0],
+      );
     }
   }, [players, connectedAddress]);
 
@@ -101,6 +111,8 @@ const Home: NextPage = () => {
     }
   }, [currentState]);
 
+  const availablePlayerAddresses = playerAddresses.filter(address => address !== connectedAddress);
+
   return (
     <>
       <div className="flex items-center flex-col flex-grow pt-48">
@@ -109,10 +121,6 @@ const Home: NextPage = () => {
             <span className="block text-8xl mb-2">Welcome to</span>
             <span className="block text-9xl font-bold">Mafia Game</span>
           </h1>
-          {selectPlayers && (
-            <SelectPlayerModal address={connectedAddress as AddressType} modalId="selectPlayer-modal" />
-          )}
-
           {!joined && connectedAddress && currentState === 0 && (
             <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
               <button
@@ -125,20 +133,16 @@ const Home: NextPage = () => {
             </div>
           )}
 
-          {joined &&
-            currentState === 2 &&
-            players?.find(player => {
-              return player.playerAddress == connectedAddress && player.role === scaffoldConfig.roles.Assassin;
-            }) !== undefined && (
-              <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
-                <button
-                  className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
-                  onClick={() => setSelectPlayers(true)}
-                >
-                  <label htmlFor="qrcode-modal">Kill the other players!</label>
-                </button>
-              </div>
-            )}
+          {joined && currentState === 2 && isAssassin(connectedAddress) && (
+            <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
+              <button
+                className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
+                onClick={() => setSelectPlayers(true)}
+              >
+                <label htmlFor="selectPlayer-modal">Kill the other players!</label>
+              </button>
+            </div>
+          )}
           <p className="text-center text-lg">
             <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
               {joined
@@ -159,23 +163,30 @@ const Home: NextPage = () => {
               <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
                 <BugAntIcon className="h-8 w-8 fill-secondary" />
                 <p>Joined Players: {playerAddresses?.length}</p>
-                {players?.map((player, i) => (
-                  <div key={i}>
+                {players?.map((player: { playerAddress: string | undefined }, i: Key | null | undefined) => (
+                  <div key={i} className="flex items-center space-x-2">
                     <Address key={i} address={player.playerAddress} />
-                    {player.playerAddress == connectedAddress && "(you)"}
+                    {player.playerAddress === connectedAddress && <span className="text-sm">(YOU)</span>}
                   </div>
                 ))}
               </div>
               <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
                 <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-                <p>Game State</p>
-                <p>{scaffoldConfig.gameState[currentState]?.state}</p>
+                <p>Game State: {scaffoldConfig.gameState[currentState]?.state}</p>
                 <p>{scaffoldConfig.gameState[currentState]?.desc}</p>
+                {joined && <p>Your Role: {scaffoldConfig.roles[currentPlayer.role]}</p>}
               </div>
             </div>
           </div>
         )}
       </div>
+      {selectPlayers && (
+        <SelectPlayerModal
+          addresses={availablePlayerAddresses as AddressType[]}
+          modalId="selectPlayer-modal"
+          setSelectedAddress={setSelectedAddress}
+        />
+      )}
     </>
   );
 };
