@@ -2,54 +2,27 @@
 
 import { useState } from "react";
 import { Address as AddressType } from "viem";
-import { useWriteContract } from "wagmi";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
-import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
-import { ContractName } from "~~/utils/scaffold-eth/contract";
 
-type SelectPlayerModalProps = {
+type SelectModererModalProps = {
   addresses: AddressType[];
   modalId: string;
-  contractName: ContractName;
-  refetchState: Function;
+  setSelectedModerator: Function;
 };
 
-export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchState }: SelectPlayerModalProps) => {
+export const SelectModererModal = ({ addresses, modalId, setSelectedModerator }: SelectModererModalProps) => {
   const [loading, setLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const { writeContractAsync } = useWriteContract();
-  const writeTxn = useTransactor();
-  const { data: mafiaContract } = useDeployedContractInfo(contractName);
-
-  const handleAssassinKill = async () => {
-    if (writeContractAsync && mafiaContract?.address) {
-      setLoading(true);
-      try {
-        const makeWriteWithParams = () =>
-          writeContractAsync({
-            address: mafiaContract.address,
-            functionName: "assassinKill",
-            abi: mafiaContract.abi,
-            args: [selectedAddress],
-          });
-        await writeTxn(makeWriteWithParams);
-        refetchState();
-      } catch (e: any) {
-        console.error("⚡️ ~ file: page.tsx:handleAssassinKill ~ error", e);
-      }
-      setLoading(false);
-    }
-  };
 
   return (
     <div>
       <label htmlFor={modalId} className="btn btn-primary btn-lg font-normal gap-1">
-        <span>Select Player To Kill</span>
+        <span>Find out the Moderator</span>
       </label>
       <input type="checkbox" id={modalId} className="modal-toggle" />
       <label htmlFor={modalId} className="modal cursor-pointer">
         <label className="modal-box relative">
-          <h3 className="text-xl font-bold mb-3">Select Player to Kill</h3>
+          <h3 className="text-xl font-bold mb-3">Vote Who's Moderator</h3>
           <label htmlFor={modalId} className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3">
             ✕
           </label>
@@ -61,7 +34,7 @@ export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchSta
                 onChange={e => setSelectedAddress(e.target.value)}
               >
                 <option value="" disabled>
-                  Select a Player address
+                  Select a Moderator address
                 </option>
                 {addresses.map((address, index) => (
                   <option key={index} value={address}>
@@ -73,7 +46,7 @@ export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchSta
             <div className="flex flex-col space-y-3">
               <button
                 className="h-10 btn btn-primary btn-sm px-2 rounded-full"
-                onClick={handleAssassinKill}
+                onClick={() => setSelectedModerator()}
                 disabled={loading}
               >
                 {!loading ? (
@@ -81,7 +54,7 @@ export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchSta
                 ) : (
                   <span className="loading loading-spinner loading-sm"></span>
                 )}
-                <span>Kill</span>
+                <span>Vote</span>
               </button>
             </div>
           </div>
