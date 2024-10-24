@@ -279,17 +279,13 @@ contract MafiaGame {
 	}
 
 	// Function to get all joined players and player addresses
-	function getAllPlayers()
-		public
-		view
-		returns (address[] memory, Player[] memory)
-	{
+	function getAllPlayers() public view returns (Player[] memory) {
 		Player[] memory allPlayers = new Player[](playerAddresses.length);
 
 		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			allPlayers[i] = players[playerAddresses[i]];
 		}
 
-		return (playerAddresses, allPlayers);
+		return allPlayers;
 	}
 }

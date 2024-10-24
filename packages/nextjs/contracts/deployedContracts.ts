@@ -185,11 +185,6 @@ const deployedContracts = {
           name: "getAllPlayers",
           outputs: [
             {
-              internalType: "address[]",
-              name: "",
-              type: "address[]",
-            },
-            {
               components: [
                 {
                   internalType: "address",
