@@ -17,10 +17,9 @@ const Home: NextPage = () => {
   const [playerAddresses, setPlayerAddresses] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState({});
   const [selectPlayers, setSelectPlayers] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState("");
   const { address: connectedAddress } = useAccount();
-  const { data: mafiaContract, isLoading: deployedContractLoading } = useDeployedContractInfo("MafiaGame");
-  const { data: result, isPending, writeContractAsync } = useWriteContract();
+  const { data: mafiaContract } = useDeployedContractInfo("MafiaGame");
+  const { writeContractAsync } = useWriteContract();
   const writeTxn = useTransactor();
   const { targetNetwork } = useTargetNetwork();
 
@@ -57,24 +56,6 @@ const Home: NextPage = () => {
       }
 
       setLoading(false);
-    }
-  };
-
-  const handleAssassinKill = async (target: AddressType) => {
-    if (writeContractAsync && mafiaContract?.address) {
-      try {
-        const makeWriteWithParams = () =>
-          writeContractAsync({
-            address: mafiaContract?.address,
-            functionName: "assassinKill",
-            abi: mafiaContract?.abi,
-            args: [selectedAddress],
-          });
-        await writeTxn(makeWriteWithParams);
-        refetchState();
-      } catch (e: any) {
-        console.error("⚡️ ~ file: page.tsx:handleAssassinKill ~ error", e);
-      }
     }
   };
 
@@ -139,7 +120,7 @@ const Home: NextPage = () => {
                 className="btn btn-secondary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
                 onClick={() => setSelectPlayers(true)}
               >
-                <label htmlFor="selectPlayer-modal">Kill the other players!</label>
+                <label htmlFor="selectPlayer-modal">Select player to kill!</label>
               </button>
             </div>
           )}
@@ -165,7 +146,7 @@ const Home: NextPage = () => {
                 <p>Joined Players: {playerAddresses?.length}</p>
                 {players?.map((player: { playerAddress: string | undefined }, i: Key | null | undefined) => (
                   <div key={i} className="flex items-center space-x-2">
-                    <Address key={i} address={player.playerAddress} />
+                    <Address key={i} address={player.playerAddress} disableAddressLink />
                     {player.playerAddress === connectedAddress && <span className="text-sm">(YOU)</span>}
                   </div>
                 ))}
@@ -174,7 +155,7 @@ const Home: NextPage = () => {
                 <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
                 <p>Game State: {scaffoldConfig.gameState[currentState]?.state}</p>
                 <p>{scaffoldConfig.gameState[currentState]?.desc}</p>
-                {joined && <p>Your Role: {scaffoldConfig.roles[currentPlayer.role]}</p>}
+                {joined && currentState === 2 && <p>Your Role: {scaffoldConfig.roles[currentPlayer?.role]}</p>}
               </div>
             </div>
           </div>
@@ -184,7 +165,8 @@ const Home: NextPage = () => {
         <SelectPlayerModal
           addresses={availablePlayerAddresses as AddressType[]}
           modalId="selectPlayer-modal"
-          setSelectedAddress={setSelectedAddress}
+          contractName={"MafiaGame"}
+          refetchState={refetchState}
         />
       )}
     </>

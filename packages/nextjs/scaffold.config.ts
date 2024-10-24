@@ -31,11 +31,11 @@ const scaffoldConfig = {
     },
     {
       state: "Day",
-      desc: "Vote to decide the player to die.",
+      desc: "Voting to kill - choose somebody available from the dropdown list to kill.",
     },
     {
       state: "Finished",
-      desc: "Waiting for the winner determination.",
+      desc: "Check for winners.",
     },
   ],
 
