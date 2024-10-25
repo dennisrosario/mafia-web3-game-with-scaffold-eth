@@ -2,18 +2,44 @@
 
 import { useState } from "react";
 import { Address as AddressType } from "viem";
+import { useWriteContract } from "wagmi";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
+import { ContractName } from "~~/utils/scaffold-eth/contract";
 
 type SelectModererModalProps = {
   addresses: AddressType[];
   modalId: string;
-  setSelectedModerator: Function;
+  contractName: ContractName;
+  refetchState: Function;
 };
 
-export const SelectModererModal = ({ addresses, modalId, setSelectedModerator }: SelectModererModalProps) => {
+export const SelectModererModal = ({ addresses, modalId, contractName, refetchState }: SelectModererModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedAddress, setSelectedAddress] = useState<AddressType>("");
+  const { writeContractAsync } = useWriteContract();
+  const writeTxn = useTransactor();
+  const { data: mafiaContract } = useDeployedContractInfo(contractName);
 
+  const handleVote = async () => {
+    if (writeContractAsync && mafiaContract?.address) {
+      setLoading(true);
+      try {
+        const makeWriteWithParams = () =>
+          writeContractAsync({
+            address: mafiaContract.address,
+            functionName: "voteToKill",
+            abi: mafiaContract.abi,
+            args: [selectedAddress],
+          });
+        await writeTxn(makeWriteWithParams);
+        refetchState();
+      } catch (e: any) {
+        console.error("⚡️ ~ file: page.tsx:handleVote ~ error", e);
+      }
+      setLoading(false);
+    }
+  };
   return (
     <div>
       <label htmlFor={modalId} className="btn btn-primary btn-lg font-normal gap-1">
@@ -46,7 +72,7 @@ export const SelectModererModal = ({ addresses, modalId, setSelectedModerator }:
             <div className="flex flex-col space-y-3">
               <button
                 className="h-10 btn btn-primary btn-sm px-2 rounded-full"
-                onClick={() => setSelectedModerator()}
+                onClick={() => handleVote()}
                 disabled={loading}
               >
                 {!loading ? (

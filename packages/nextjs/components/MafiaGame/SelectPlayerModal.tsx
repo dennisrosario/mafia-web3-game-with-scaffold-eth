@@ -12,11 +12,18 @@ type SelectPlayerModalProps = {
   modalId: string;
   contractName: ContractName;
   refetchState: Function;
+  refetchLastKilled: Function;
 };
 
-export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchState }: SelectPlayerModalProps) => {
+export const SelectPlayerModal = ({
+  addresses,
+  modalId,
+  contractName,
+  refetchState,
+  refetchLastKilled,
+}: SelectPlayerModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedAddress, setSelectedAddress] = useState<AddressType>("");
   const { writeContractAsync } = useWriteContract();
   const writeTxn = useTransactor();
   const { data: mafiaContract } = useDeployedContractInfo(contractName);
@@ -34,6 +41,7 @@ export const SelectPlayerModal = ({ addresses, modalId, contractName, refetchSta
           });
         await writeTxn(makeWriteWithParams);
         refetchState();
+        refetchLastKilled();
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleAssassinKill ~ error", e);
       }

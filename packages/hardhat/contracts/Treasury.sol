@@ -17,4 +17,13 @@ contract Treasury {
 		balances[to] = 0; // Reset balance before transfer to prevent reentrancy
 		to.transfer(amount);
 	}
+
+	function getBalance() external view returns (uint) {
+		return address(this).balance;
+	}
+
+	function distributePrize(address recipient, uint amount) external {
+		require(address(this).balance >= amount, "Not enough funds");
+		payable(recipient).transfer(amount);
+	}
 }

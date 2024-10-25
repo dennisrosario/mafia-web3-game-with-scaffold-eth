@@ -27,13 +27,10 @@ contract MafiaGame {
 	mapping(address => Player) public players;
 	address[] public playerAddresses;
 	GameState public currentState;
-	uint public startTime;
-	uint public stageDuration;
 	address public lastKilled;
 	Treasury public treasury;
 
-	// Voting variables
-	mapping(address => uint) public votes; // Track votes for each player
+	mapping(address => uint) public votes;
 	uint public totalVotes;
 
 	// Events
@@ -45,6 +42,13 @@ contract MafiaGame {
 	event PlayerVoted(address indexed voter, address indexed target);
 	event NightNarration(address indexed killer, address indexed victim);
 	event DayNarration(address indexed victim);
+	event VotingRestarted();
+	event VotingResult(
+		address indexed mostVoted,
+		uint highestVotes,
+		bool isTie,
+		uint[] voteCounts
+	);
 
 	modifier onlyAlive() {
 		require(players[msg.sender].isAlive, "You are dead!");
@@ -88,13 +92,11 @@ contract MafiaGame {
 
 	function startGame() private {
 		currentState = GameState.AssigningRoles;
-		startTime = block.timestamp;
 		emit GameStarted();
 		assignRoles();
 	}
 
 	function assignRoles() private {
-		// Simple random assignment for demonstration; replace with a secure method in production
 		players[playerAddresses[0]].role = Role.Assassin;
 		players[playerAddresses[1]].role = Role.Assassin;
 		players[playerAddresses[2]].role = Role.Police;
@@ -107,9 +109,7 @@ contract MafiaGame {
 			);
 		}
 
-		// Move to the night phase after role assignment
 		currentState = GameState.Night;
-		startTime = block.timestamp; // Reset start time for the night phase
 	}
 
 	function assassinKill(
@@ -118,167 +118,166 @@ contract MafiaGame {
 		require(players[target].isAlive, "Target is already dead!");
 		require(target != msg.sender, "Assassin cannot kill themselves!");
 
-		// Kill the target
 		players[target].isAlive = false;
-		lastKilled = target; // Store last killed address
+		lastKilled = target;
 		emit PlayerKilled(target);
 		emit AssassinAction(msg.sender, target);
 		emit NightNarration(msg.sender, target);
 
-		// Move to day phase
 		endNight();
 	}
 
 	function endNight() private {
 		currentState = GameState.Day;
-		startTime = block.timestamp; // Reset start time for the day phase
 		emit DayNarration(lastKilled);
 	}
 
 	function voteToKill(
 		address target
 	) external onlyAlive onlyInState(GameState.Day) {
-		require(!players[target].hasVoted, "Player has already voted!");
-		players[target].hasVoted = true;
+		require(!players[msg.sender].hasVoted, "You have already voted!");
+		require(players[target].isAlive, "Target is already dead!");
+
+		players[msg.sender].hasVoted = true;
 		votes[target]++;
 		totalVotes++;
 		emit PlayerVoted(msg.sender, target);
-
-		// Check if voting is over
-		if (totalVotes >= 3) {
-			// Majority required to kill (3 votes in a 4-player game)
-			executeVote(target);
-		}
 	}
 
-	function executeVote(address target) private {
-		require(players[target].isAlive, "Target is already dead!");
+	function checkVoteResult() external {
+		address mostVoted = address(0);
+		uint highestVotes = 0;
+		bool isTie = false;
+		uint[] memory voteCounts = new uint[](playerAddresses.length - 1);
 
-		// Kill the target
-		players[target].isAlive = false;
-		emit PlayerKilled(target);
-		emit DayNarration(target);
-
-		// Check for winners
-		checkForGameEnd();
-
-		// Reset voting for the next day
-		resetVoting();
-	}
-
-	function resetVoting() private {
-		for (uint256 i = 0; i < playerAddresses.length; i++) {
-			players[playerAddresses[i]].hasVoted = false; // Reset voting status for the next day
-		}
-		totalVotes = 0; // Reset total votes
-	}
-
-	function checkForGameEnd() private {
-		uint256 aliveCount = 0;
-		uint256 assassinCount = 0;
-		uint256 townCount = 0; // Track number of Town members (Police + Citizen)
-
-		for (uint256 i = 0; i < playerAddresses.length; i++) {
-			if (players[playerAddresses[i]].isAlive) {
-				aliveCount++;
-				if (players[playerAddresses[i]].role == Role.Assassin) {
-					assassinCount++;
-				} else {
-					townCount++;
+		for (uint i = 0; i < playerAddresses.length; i++) {
+			address player = playerAddresses[i];
+			if (players[player].isAlive) {
+				voteCounts[i] = votes[player];
+				if (votes[player] > highestVotes) {
+					highestVotes = votes[player];
+					mostVoted = player;
+					isTie = false;
+				} else if (votes[player] == highestVotes && highestVotes > 0) {
+					isTie = true;
 				}
 			}
 		}
 
-		// Check if all players are dead
-		if (aliveCount == 0) {
-			endGame(); // All players dead, end the game
-			return;
+		// If one player has proper voting count
+		if (!isTie && mostVoted != address(0)) {
+			players[mostVoted].isAlive = false;
+			emit PlayerKilled(mostVoted);
+			emit DayNarration(mostVoted);
+			checkForGameEnd();
+		}
+		// If there's no vote or tie
+		else {
+			emit VotingRestarted();
 		}
 
-		// Check if only Assassins remain
-		if (assassinCount == aliveCount) {
-			endGame(); // Assassins win
-			return;
-		}
-
-		// Check if Police Officer and Citizen remain
-		if (assassinCount == 0 && townCount == 2) {
-			endGame(); // Town wins
-			return;
-		}
-
-		// Check if 1 Assassin and 1 Town member remain
-		if (assassinCount == 1 && townCount == 1) {
-			endGame(); // Assassin wins
-			return;
-		}
+		resetVoting();
+		emit VotingResult(mostVoted, highestVotes, isTie, voteCounts);
 	}
 
-	function endGame() private {
-		address[] memory winners = determineWinner();
-		currentState = GameState.Finished;
-		emit GameEnded(winners); // Emit event with the winners
+	function resetVoting() private {
+		for (uint256 i = 0; i < playerAddresses.length; i++) {
+			players[playerAddresses[i]].hasVoted = false;
+			votes[playerAddresses[i]] = 0;
+		}
+		totalVotes = 0;
 	}
 
-	function determineWinner() private view returns (address[] memory) {
-		uint256 aliveCount = 0;
-		address[] memory winners;
+	function checkForGameEnd() private {
+		uint256 aliveAssassins = 0;
+		bool policeAlive = false;
+		bool citizenAlive = false;
 
+		// Check each player to see who is alive and their role
 		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			if (players[playerAddresses[i]].isAlive) {
-				winners[aliveCount] = players[playerAddresses[i]].playerAddress; // Store the player's address in the winners array
-				aliveCount++;
+				if (players[playerAddresses[i]].role == Role.Assassin) {
+					aliveAssassins++;
+				} else if (players[playerAddresses[i]].role == Role.Police) {
+					policeAlive = true;
+				} else if (players[playerAddresses[i]].role == Role.Citizen) {
+					citizenAlive = true;
+				}
+			}
+		}
 
-				// Break the loop if we have found two winners
-				if (aliveCount == 2) {
+		Role[] memory winningRoles = new Role[](2);
+
+		if (aliveAssassins == 0) {
+			winningRoles[0] = Role.Police;
+			winningRoles[1] = Role.Citizen;
+		} else {
+			winningRoles[0] = Role.Assassin;
+		}
+		endGame(winningRoles);
+	}
+
+	function endGame(Role[] memory winningRoles) private {
+		address[] memory winners = getWinnersByRoles(winningRoles);
+		uint totalPrize = treasury.getBalance();
+		uint prizePerWinner = totalPrize / winners.length;
+
+		// Distribute prizes to winners
+		for (uint i = 0; i < winners.length; i++) {
+			treasury.distributePrize(winners[i], prizePerWinner);
+		}
+
+		currentState = GameState.Finished;
+		emit GameEnded(winners);
+	}
+	function getWinnersByRoles(
+		Role[] memory roles
+	) private view returns (address[] memory) {
+		uint winnerCount = 0;
+
+		for (uint i = 0; i < playerAddresses.length; i++) {
+			for (uint j = 0; j < roles.length; j++) {
+				if (
+					players[playerAddresses[i]].isAlive &&
+					players[playerAddresses[i]].role == roles[j]
+				) {
+					winnerCount++;
 					break;
 				}
 			}
 		}
 
-		// If no winners are found
-		if (aliveCount == 0) {
-			revert("No winner found");
+		address[] memory winners = new address[](winnerCount);
+		uint index = 0;
+
+		for (uint i = 0; i < playerAddresses.length; i++) {
+			for (uint j = 0; j < roles.length; j++) {
+				if (
+					players[playerAddresses[i]].isAlive &&
+					players[playerAddresses[i]].role == roles[j]
+				) {
+					winners[index] = playerAddresses[i];
+					index++;
+					break;
+				}
+			}
 		}
 
-		// Resize the array if only one winner is found
-		if (aliveCount < 2) {
-			return winners; // Return only the single winner
-		}
-
-		// Return the winners (up to 2)
 		return winners;
 	}
 
-	function withdrawPrize() external onlyInState(GameState.Finished) {
-		// Logic to withdraw the prize
-		treasury.withdraw(payable(msg.sender));
-	}
-
-	// Function to check the current stage duration
-	function currentStageDuration() public view returns (uint) {
-		if (currentState == GameState.AssigningRoles) {
-			return 30 seconds;
-		} else if (currentState == GameState.Night) {
-			return 30 seconds;
-		} else if (currentState == GameState.Day) {
-			return 60 seconds;
-		} else {
-			return 0; // No active stage
+	function contains(
+		Role[] memory array,
+		Role value
+	) private pure returns (bool) {
+		for (uint i = 0; i < array.length; i++) {
+			if (array[i] == value) {
+				return true;
+			}
 		}
+		return false;
 	}
 
-	// Function to check if the current stage has ended
-	function hasStageEnded() public view returns (bool) {
-		return (block.timestamp >= startTime + currentStageDuration());
-	}
-
-	// Function to get the count of joined players
-	function getPlayerCount() public view returns (uint256) {
-		return playerAddresses.length;
-	}
-
-	// Function to get all joined players and player addresses
 	function getAllPlayers() public view returns (Player[] memory) {
 		Player[] memory allPlayers = new Player[](playerAddresses.length);
 

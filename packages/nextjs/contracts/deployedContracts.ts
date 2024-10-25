@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     MafiaGame: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
       abi: [
         {
           inputs: [
@@ -142,6 +142,43 @@ const deployedContracts = {
           type: "event",
         },
         {
+          anonymous: false,
+          inputs: [],
+          name: "VotingRestarted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "mostVoted",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "highestVotes",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "bool",
+              name: "isTie",
+              type: "bool",
+            },
+            {
+              indexed: false,
+              internalType: "uint256[]",
+              name: "voteCounts",
+              type: "uint256[]",
+            },
+          ],
+          name: "VotingResult",
+          type: "event",
+        },
+        {
           inputs: [
             {
               internalType: "address",
@@ -156,15 +193,9 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "currentStageDuration",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
+          name: "checkVoteResult",
+          outputs: [],
+          stateMutability: "nonpayable",
           type: "function",
         },
         {
@@ -210,32 +241,6 @@ const deployedContracts = {
               internalType: "struct MafiaGame.Player[]",
               name: "",
               type: "tuple[]",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "getPlayerCount",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "hasStageEnded",
-          outputs: [
-            {
-              internalType: "bool",
-              name: "",
-              type: "bool",
             },
           ],
           stateMutability: "view",
@@ -316,32 +321,6 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "stageDuration",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "startTime",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
           name: "totalVotes",
           outputs: [
             {
@@ -398,18 +377,11 @@ const deployedContracts = {
           stateMutability: "view",
           type: "function",
         },
-        {
-          inputs: [],
-          name: "withdrawPrize",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
       ],
       inheritedFunctions: {},
     },
     Treasury: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
       abi: [
         {
           inputs: [
@@ -441,6 +413,37 @@ const deployedContracts = {
           name: "deposit",
           outputs: [],
           stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "recipient",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+          ],
+          name: "distributePrize",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getBalance",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
           type: "function",
         },
         {
