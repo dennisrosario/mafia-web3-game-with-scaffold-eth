@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Address as AddressType } from "viem";
 import { useWriteContract } from "wagmi";
-import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, DocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { ContractName } from "~~/utils/scaffold-eth/contract";
 
@@ -22,15 +22,13 @@ export const SelectPlayerModal = ({
   refetchState,
   refetchLastKilled,
 }: SelectPlayerModalProps) => {
-  const [loading, setLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<AddressType>("");
-  const { writeContractAsync } = useWriteContract();
+  const { writeContractAsync, isPending } = useWriteContract();
   const writeTxn = useTransactor();
   const { data: mafiaContract } = useDeployedContractInfo(contractName);
 
   const handleAssassinKill = async () => {
     if (writeContractAsync && mafiaContract?.address) {
-      setLoading(true);
       try {
         const makeWriteWithParams = () =>
           writeContractAsync({
@@ -45,14 +43,14 @@ export const SelectPlayerModal = ({
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleAssassinKill ~ error", e);
       }
-      setLoading(false);
     }
   };
 
   return (
     <div>
-      <label htmlFor={modalId} className="btn btn-primary btn-lg font-normal gap-1">
-        <span>Select Player To Kill</span>
+      <label htmlFor={modalId} className="btn btn-primary btn-lg bg-base-100 gap-1">
+        <DocumentCheckIcon className="h-6 w-6" />
+        <span>SELECT TO KILL</span>
       </label>
       <input type="checkbox" id={modalId} className="modal-toggle" />
       <label htmlFor={modalId} className="modal cursor-pointer">
@@ -82,10 +80,10 @@ export const SelectPlayerModal = ({
               <button
                 className="h-10 btn btn-primary btn-sm px-2 rounded-full"
                 onClick={handleAssassinKill}
-                disabled={loading}
+                disabled={isPending}
               >
-                {!loading ? (
-                  <BanknotesIcon className="h-6 w-6" />
+                {!isPending ? (
+                  <CheckCircleIcon className="h-6 w-6" />
                 ) : (
                   <span className="loading loading-spinner loading-sm"></span>
                 )}

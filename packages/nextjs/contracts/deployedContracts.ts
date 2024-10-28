@@ -68,6 +68,12 @@ const deployedContracts = {
         {
           anonymous: false,
           inputs: [],
+          name: "GameReset",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [],
           name: "GameStarted",
           type: "event",
         },
@@ -120,6 +126,25 @@ const deployedContracts = {
             },
           ],
           name: "PlayerVoted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "winner",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+          ],
+          name: "PrizeClaimed",
           type: "event",
         },
         {
@@ -187,6 +212,13 @@ const deployedContracts = {
             },
           ],
           name: "assassinKill",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "claimPrize",
           outputs: [],
           stateMutability: "nonpayable",
           type: "function",
@@ -340,13 +372,6 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "progressGame",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [],
           name: "startTime",
           outputs: [
             {
@@ -416,12 +441,72 @@ const deployedContracts = {
           stateMutability: "view",
           type: "function",
         },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          name: "winners",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
       ],
       inheritedFunctions: {},
     },
     Treasury: {
       address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+          ],
+          name: "OwnableInvalidOwner",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "OwnableUnauthorizedAccount",
+          type: "error",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "previousOwner",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "newOwner",
+              type: "address",
+            },
+          ],
+          name: "OwnershipTransferred",
+          type: "event",
+        },
         {
           inputs: [
             {
@@ -457,7 +542,7 @@ const deployedContracts = {
         {
           inputs: [
             {
-              internalType: "address",
+              internalType: "address payable",
               name: "recipient",
               type: "address",
             },
@@ -483,6 +568,65 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "mafiaGame",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "owner",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "renounceOwnership",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "_mafiaGame",
+              type: "address",
+            },
+          ],
+          name: "setMafiaGameAddress",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "newOwner",
+              type: "address",
+            },
+          ],
+          name: "transferOwnership",
+          outputs: [],
+          stateMutability: "nonpayable",
           type: "function",
         },
         {

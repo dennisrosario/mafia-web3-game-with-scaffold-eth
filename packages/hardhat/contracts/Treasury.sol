@@ -1,29 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract Treasury {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Treasury is Ownable(msg.sender) {
+	address public mafiaGame;
 	mapping(address => uint) public balances;
 
-	// Deposit funds into the treasury
-	function deposit(address player) external payable {
+	modifier onlyMafiaGame() {
+		require(
+			msg.sender == mafiaGame,
+			"Only MafiaGame can call this function"
+		);
+		_;
+	}
+
+	function setMafiaGameAddress(address _mafiaGame) external onlyOwner {
+		require(_mafiaGame != address(0), "Invalid MafiaGame address");
+		mafiaGame = _mafiaGame;
+	}
+
+	function deposit(address player) external payable onlyMafiaGame {
+		require(msg.value > 0, "Deposit must be greater than zero");
 		balances[player] += msg.value;
 	}
 
-	// Withdraw funds from the treasury
-	function withdraw(address payable to) external {
+	function withdraw(address payable to) external onlyMafiaGame {
 		uint amount = balances[to];
 		require(amount > 0, "No funds to withdraw");
 
-		balances[to] = 0; // Reset balance before transfer to prevent reentrancy
+		balances[to] = 0;
 		to.transfer(amount);
+	}
+
+	function distributePrize(
+		address payable recipient,
+		uint amount
+	) external onlyMafiaGame {
+		require(address(this).balance >= amount, "Not enough funds");
+		require(
+			balances[recipient] >= amount,
+			"Recipient balance insufficient"
+		);
+
+		balances[recipient] -= amount;
+		recipient.transfer(amount);
 	}
 
 	function getBalance() external view returns (uint) {
 		return address(this).balance;
-	}
-
-	function distributePrize(address recipient, uint amount) external {
-		require(address(this).balance >= amount, "Not enough funds");
-		payable(recipient).transfer(amount);
 	}
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Address as AddressType } from "viem";
 import { useWriteContract } from "wagmi";
-import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ViewfinderCircleIcon } from "@heroicons/react/24/outline";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { ContractName } from "~~/utils/scaffold-eth/contract";
 
@@ -15,15 +15,13 @@ type SelectModererModalProps = {
 };
 
 export const SelectModererModal = ({ addresses, modalId, contractName, refetchState }: SelectModererModalProps) => {
-  const [loading, setLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<AddressType>("");
-  const { writeContractAsync } = useWriteContract();
+  const { writeContractAsync, isPending } = useWriteContract();
   const writeTxn = useTransactor();
   const { data: mafiaContract } = useDeployedContractInfo(contractName);
 
   const handleVote = async () => {
     if (writeContractAsync && mafiaContract?.address) {
-      setLoading(true);
       try {
         const makeWriteWithParams = () =>
           writeContractAsync({
@@ -37,13 +35,13 @@ export const SelectModererModal = ({ addresses, modalId, contractName, refetchSt
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleVote ~ error", e);
       }
-      setLoading(false);
     }
   };
   return (
     <div>
-      <label htmlFor={modalId} className="btn btn-primary btn-lg font-normal gap-1">
-        <span>Find out the Moderator</span>
+      <label htmlFor={modalId} className="btn btn-primary btn-lg bg-base-100 gap-1">
+        <ViewfinderCircleIcon className="h-6 w-6" />
+        <span>VOTE TO MODERATOR</span>
       </label>
       <input type="checkbox" id={modalId} className="modal-toggle" />
       <label htmlFor={modalId} className="modal cursor-pointer">
@@ -73,10 +71,10 @@ export const SelectModererModal = ({ addresses, modalId, contractName, refetchSt
               <button
                 className="h-10 btn btn-primary btn-sm px-2 rounded-full"
                 onClick={() => handleVote()}
-                disabled={loading}
+                disabled={isPending}
               >
-                {!loading ? (
-                  <BanknotesIcon className="h-6 w-6" />
+                {!isPending ? (
+                  <CheckCircleIcon className="h-6 w-6" />
                 ) : (
                   <span className="loading loading-spinner loading-sm"></span>
                 )}

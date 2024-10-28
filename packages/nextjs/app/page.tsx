@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { Address as AddressType, parseUnits } from "viem";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftEndOnRectangleIcon, ClockIcon, UsersIcon } from "@heroicons/react/24/outline";
 import { SelectModererModal, SelectPlayerModal } from "~~/components/MafiaGame";
 import { Address } from "~~/components/scaffold-eth";
 import {
@@ -31,7 +31,6 @@ interface VoteResult {
 }
 
 const Home: NextPage = () => {
-  const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
   const [playerAddresses, setPlayerAddresses] = useState<string[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState<Player>({
@@ -43,7 +42,7 @@ const Home: NextPage = () => {
 
   const { address: connectedAddress } = useAccount();
   const { data: mafiaContract } = useDeployedContractInfo("MafiaGame");
-  const { writeContractAsync } = useWriteContract();
+  const { writeContractAsync, isPending } = useWriteContract();
   const writeTxn = useTransactor();
   const { targetNetwork } = useTargetNetwork();
 
@@ -52,7 +51,7 @@ const Home: NextPage = () => {
     eventName: "VotingResult",
     onLogs: logs => {
       logs.map(log => {
-        const { mostVoted, highestVotes, isTie, voteCounts } = log.args;
+        const { mostVoted, highestVotes, isTie, voteCounts } = log.args as unknown as VoteResult;
         console.log("📡 VotingResult event", mostVoted, highestVotes, isTie, voteCounts);
       });
     },
@@ -107,7 +106,6 @@ const Home: NextPage = () => {
 
   const handleJoin = async () => {
     if (writeContractAsync && mafiaContract?.address) {
-      setLoading(true);
       try {
         const makeWriteWithParams = () =>
           writeContractAsync({
@@ -122,7 +120,6 @@ const Home: NextPage = () => {
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleJoin ~ error", e);
       }
-      setLoading(false);
     }
   };
 
@@ -179,11 +176,16 @@ const Home: NextPage = () => {
           {!joined && connectedAddress && currentState === 0 && (
             <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
               <button
-                className="btn btn-primary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
+                className="h-10 btn btn-primary rounded-full btn-lg bg-base-100 hover:bg-secondary gap-1"
                 onClick={handleJoin}
-                disabled={loading}
+                disabled={isPending}
               >
-                {!loading ? "JOIN GAME" : <span className="loading loading-spinner loading-sm" />}
+                {isPending ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <ArrowLeftEndOnRectangleIcon className="h-6 w-6" />
+                )}
+                JOIN GAME
               </button>
             </div>
           )}
@@ -210,6 +212,7 @@ const Home: NextPage = () => {
               />
             </div>
           )}
+
           {currentState === 0 && (
             <>
               <p className="text-center text-lg pt-10">
@@ -222,7 +225,7 @@ const Home: NextPage = () => {
 
               <p className="text-center text-lg">
                 <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-                  The winning prize will be paid after the game ended automatically!
+                  The winning prize will be distributed to the winners!
                 </code>
               </p>
             </>
@@ -233,7 +236,7 @@ const Home: NextPage = () => {
           <div className="flex-grow w-full mt-12 px-8 py-12">
             <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
               <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
-                <BugAntIcon className="h-8 w-8 fill-secondary" />
+                <UsersIcon className="h-8 w-8 fill-secondary" />
                 <p>Joined Players: {playerAddresses.length}</p>
                 {players?.map((player, i) => (
                   <div key={i} className="flex items-center space-x-2">
@@ -244,7 +247,7 @@ const Home: NextPage = () => {
                 ))}
               </div>
               <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-lg rounded-3xl">
-                <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
+                <ClockIcon className="h-8 w-8 fill-secondary" />
                 <p>Game State: {scaffoldConfig.gameState[currentState]?.state}</p>
                 <p>{scaffoldConfig.gameState[currentState]?.desc}</p>
                 {joined && currentState === 2 && <p>Your Role: {scaffoldConfig.roles[currentPlayer.role]}</p>}

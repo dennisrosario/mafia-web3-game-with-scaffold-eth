@@ -47,7 +47,6 @@ const deployMafiaGame: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  // Deploy the Treasury contract first
   const treasuryDeployment = await deploy("Treasury", {
     from: deployer,
     log: true,
@@ -56,19 +55,20 @@ const deployMafiaGame: DeployFunction = async function (hre: HardhatRuntimeEnvir
 
   console.log("Treasury deployed to:", treasuryDeployment.address);
 
-  // Now deploy the MafiaGame contract with the address of the deployed Treasury
   const mafiaGameDeployment = await deploy("MafiaGame", {
     from: deployer,
-    args: [treasuryDeployment.address], // Pass the Treasury address as an argument
+    args: [treasuryDeployment.address],
     log: true,
     autoMine: true,
   });
 
   console.log("MafiaGame deployed to:", mafiaGameDeployment.address);
-
-  // Get the deployed contract to interact with it after deploying.
   const mafiaGame = await hre.ethers.getContract<Contract>("MafiaGame", deployer);
   console.log("👋 MafiaGame is ready for interaction");
+
+  const treasury = await hre.ethers.getContractAt("Treasury", treasuryDeployment.address);
+  await treasury.setMafiaGameAddress(mafiaGameDeployment.address);
+  console.log("MafiaGame address set in Treasury:", mafiaGameDeployment.address);
 };
 
 export default deployMafiaGame;
