@@ -27,16 +27,16 @@ contract MafiaGame {
 	mapping(address => Player) public players;
 	address[] public playerAddresses;
 	GameState public currentState;
+	uint public startTime;
 	address public lastKilled;
 	Treasury public treasury;
 
 	mapping(address => uint) public votes;
 	uint public totalVotes;
 
-	// Events
 	event GameStarted();
 	event RoleAssigned(address indexed player, Role role);
-	event PlayerKilled(address indexed player);
+	event PlayerKilled(address indexed killedPlayer);
 	event GameEnded(address[] winners);
 	event AssassinAction(address indexed assassin, address indexed target);
 	event PlayerVoted(address indexed voter, address indexed target);
@@ -92,6 +92,7 @@ contract MafiaGame {
 
 	function startGame() private {
 		currentState = GameState.AssigningRoles;
+		startTime = block.timestamp;
 		emit GameStarted();
 		assignRoles();
 	}
@@ -110,6 +111,7 @@ contract MafiaGame {
 		}
 
 		currentState = GameState.Night;
+		startTime = block.timestamp;
 	}
 
 	function assassinKill(
@@ -123,12 +125,21 @@ contract MafiaGame {
 		emit PlayerKilled(target);
 		emit AssassinAction(msg.sender, target);
 		emit NightNarration(msg.sender, target);
+	}
 
-		endNight();
+	function progressGame() external {
+		require(hasStageEnded(), "Current stage time has not yet ended");
+
+		if (currentState == GameState.Night) {
+			endNight();
+		} else if (currentState == GameState.Day) {
+			checkVoteResult();
+		}
 	}
 
 	function endNight() private {
 		currentState = GameState.Day;
+		startTime = block.timestamp;
 		emit DayNarration(lastKilled);
 	}
 
@@ -144,7 +155,7 @@ contract MafiaGame {
 		emit PlayerVoted(msg.sender, target);
 	}
 
-	function checkVoteResult() external {
+	function checkVoteResult() private {
 		address mostVoted = address(0);
 		uint highestVotes = 0;
 		bool isTie = false;
@@ -164,15 +175,12 @@ contract MafiaGame {
 			}
 		}
 
-		// If one player has proper voting count
 		if (!isTie && mostVoted != address(0)) {
 			players[mostVoted].isAlive = false;
 			emit PlayerKilled(mostVoted);
 			emit DayNarration(mostVoted);
-			checkForGameEnd();
-		}
-		// If there's no vote or tie
-		else {
+			finalizeGame();
+		} else {
 			emit VotingRestarted();
 		}
 
@@ -186,14 +194,14 @@ contract MafiaGame {
 			votes[playerAddresses[i]] = 0;
 		}
 		totalVotes = 0;
+		startTime = block.timestamp;
 	}
 
-	function checkForGameEnd() private {
+	function finalizeGame() private {
 		uint256 aliveAssassins = 0;
 		bool policeAlive = false;
 		bool citizenAlive = false;
 
-		// Check each player to see who is alive and their role
 		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			if (players[playerAddresses[i]].isAlive) {
 				if (players[playerAddresses[i]].role == Role.Assassin) {
@@ -207,13 +215,13 @@ contract MafiaGame {
 		}
 
 		Role[] memory winningRoles = new Role[](2);
-
 		if (aliveAssassins == 0) {
 			winningRoles[0] = Role.Police;
 			winningRoles[1] = Role.Citizen;
 		} else {
 			winningRoles[0] = Role.Assassin;
 		}
+
 		endGame(winningRoles);
 	}
 
@@ -222,19 +230,17 @@ contract MafiaGame {
 		uint totalPrize = treasury.getBalance();
 		uint prizePerWinner = totalPrize / winners.length;
 
-		// Distribute prizes to winners
 		for (uint i = 0; i < winners.length; i++) {
 			treasury.distributePrize(winners[i], prizePerWinner);
 		}
-
 		currentState = GameState.Finished;
 		emit GameEnded(winners);
 	}
+
 	function getWinnersByRoles(
 		Role[] memory roles
 	) private view returns (address[] memory) {
 		uint winnerCount = 0;
-
 		for (uint i = 0; i < playerAddresses.length; i++) {
 			for (uint j = 0; j < roles.length; j++) {
 				if (
@@ -249,7 +255,6 @@ contract MafiaGame {
 
 		address[] memory winners = new address[](winnerCount);
 		uint index = 0;
-
 		for (uint i = 0; i < playerAddresses.length; i++) {
 			for (uint j = 0; j < roles.length; j++) {
 				if (
@@ -262,29 +267,30 @@ contract MafiaGame {
 				}
 			}
 		}
-
 		return winners;
 	}
 
-	function contains(
-		Role[] memory array,
-		Role value
-	) private pure returns (bool) {
-		for (uint i = 0; i < array.length; i++) {
-			if (array[i] == value) {
-				return true;
-			}
+	function hasStageEnded() public view returns (bool) {
+		return (block.timestamp >= startTime + currentStageDuration());
+	}
+
+	function currentStageDuration() public view returns (uint) {
+		if (currentState == GameState.AssigningRoles) {
+			return 30 seconds;
+		} else if (currentState == GameState.Night) {
+			return 30 seconds;
+		} else if (currentState == GameState.Day) {
+			return 60 seconds;
+		} else {
+			return 0; // No active stage
 		}
-		return false;
 	}
 
 	function getAllPlayers() public view returns (Player[] memory) {
 		Player[] memory allPlayers = new Player[](playerAddresses.length);
-
 		for (uint256 i = 0; i < playerAddresses.length; i++) {
 			allPlayers[i] = players[playerAddresses[i]];
 		}
-
 		return allPlayers;
 	}
 }

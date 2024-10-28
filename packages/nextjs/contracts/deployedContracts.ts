@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     MafiaGame: {
-      address: "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
       abi: [
         {
           inputs: [
@@ -96,7 +96,7 @@ const deployedContracts = {
             {
               indexed: true,
               internalType: "address",
-              name: "player",
+              name: "killedPlayer",
               type: "address",
             },
           ],
@@ -193,9 +193,15 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "checkVoteResult",
-          outputs: [],
-          stateMutability: "nonpayable",
+          name: "currentStageDuration",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
           type: "function",
         },
         {
@@ -241,6 +247,19 @@ const deployedContracts = {
               internalType: "struct MafiaGame.Player[]",
               name: "",
               type: "tuple[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "hasStageEnded",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
             },
           ],
           stateMutability: "view",
@@ -321,6 +340,26 @@ const deployedContracts = {
         },
         {
           inputs: [],
+          name: "progressGame",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "startTime",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "totalVotes",
           outputs: [
             {
@@ -381,7 +420,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     Treasury: {
-      address: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [
         {
           inputs: [

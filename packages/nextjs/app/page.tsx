@@ -43,7 +43,7 @@ const Home: NextPage = () => {
 
   const { address: connectedAddress } = useAccount();
   const { data: mafiaContract } = useDeployedContractInfo("MafiaGame");
-  const { data: result, writeContractAsync } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const writeTxn = useTransactor();
   const { targetNetwork } = useTargetNetwork();
 
@@ -54,6 +54,21 @@ const Home: NextPage = () => {
       logs.map(log => {
         const { mostVoted, highestVotes, isTie, voteCounts } = log.args;
         console.log("📡 VotingResult event", mostVoted, highestVotes, isTie, voteCounts);
+      });
+    },
+  });
+
+  useScaffoldWatchContractEvent({
+    contractName: "MafiaGame",
+    eventName: "PlayerKilled",
+    onLogs: logs => {
+      logs.map(log => {
+        const { killedPlayer } = log.args;
+        console.log("📡 VotingResult event", killedPlayer);
+
+        if (currentState === 3) {
+          console.log(`Player ${killedPlayer} was killed by community vote.`);
+        }
       });
     },
   });
@@ -106,25 +121,6 @@ const Home: NextPage = () => {
         refetchState();
       } catch (e: any) {
         console.error("⚡️ ~ file: page.tsx:handleJoin ~ error", e);
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleGetVoteResult = async () => {
-    if (writeContractAsync && mafiaContract?.address) {
-      setLoading(true);
-      try {
-        const makeWriteWithParams = () =>
-          writeContractAsync({
-            address: mafiaContract?.address,
-            functionName: "checkVoteResult",
-            abi: mafiaContract?.abi,
-          });
-        await writeTxn(makeWriteWithParams);
-        refetchState();
-      } catch (e: any) {
-        console.error("⚡️ ~ file: page.tsx:handleGetVoteResult ~ error", e);
       }
       setLoading(false);
     }
@@ -214,35 +210,27 @@ const Home: NextPage = () => {
               />
             </div>
           )}
+          {currentState === 0 && (
+            <>
+              <p className="text-center text-lg pt-10">
+                <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
+                  {joined
+                    ? `Please wait until the game started (need 4 players to Join)`
+                    : `Get started by paying just ${scaffoldConfig.joiningFee} ETH`}
+                </code>
+              </p>
 
-          {joined && currentState === 3 && (
-            <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
-              <button
-                className="btn btn-primary btn-lg font-light hover:border-transparent bg-base-100 hover:bg-secondary"
-                onClick={handleGetVoteResult}
-                disabled={loading}
-              >
-                {!loading ? "Get Vote Result" : <span className="loading loading-spinner loading-sm" />}
-              </button>
-            </div>
+              <p className="text-center text-lg">
+                <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
+                  The winning prize will be paid after the game ended automatically!
+                </code>
+              </p>
+            </>
           )}
-
-          <p className="text-center text-lg pt-10">
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              {joined
-                ? `Please wait until the game started (need 4 players to Join)`
-                : `Get started by paying just ${scaffoldConfig.joiningFee} ETH`}
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              The winning prize will be paid after the game ended automatically!
-            </code>
-          </p>
         </div>
 
         {connectedAddress && (
-          <div className="flex-grow w-full mt-16 px-8 py-12">
+          <div className="flex-grow w-full mt-12 px-8 py-12">
             <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
               <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-2xl w-xl rounded-3xl">
                 <BugAntIcon className="h-8 w-8 fill-secondary" />
