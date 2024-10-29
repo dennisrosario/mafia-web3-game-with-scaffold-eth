@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     MafiaGame: {
-      address: "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
+      address: "0xc5a5C42992dECbae36851359345FE25997F5C42d",
       abi: [
         {
           inputs: [
@@ -445,7 +445,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     Treasury: {
-      address: "0x59b670e9fA9D0A427751Af201D676719a970857b",
+      address: "0x09635F643e140090A9A8Dcd712eD6285858ceBef",
       abi: [
         {
           inputs: [
@@ -580,6 +580,19 @@ const deployedContracts = {
         {
           inputs: [],
           name: "renounceOwnership",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address[]",
+              name: "playerAddresses",
+              type: "address[]",
+            },
+          ],
+          name: "resetBalances",
           outputs: [],
           stateMutability: "nonpayable",
           type: "function",
