@@ -47,7 +47,7 @@ contract MafiaGame {
 	event NightNarration(address indexed killer, address indexed victim);
 	event PlayerVoted(address indexed voter, address indexed target);
 	event VotingRestarted();
-	event DayNarration(address indexed victim, address[] winners);
+	event DayNarration(address indexed victim);
 	event VotingResult(
 		address indexed mostVoted,
 		uint highestVotes,
@@ -168,7 +168,7 @@ contract MafiaGame {
 			lastKilled = result.mostVoted;
 			currentState = GameState.Finalizing;
 			checkWinners();
-			emit DayNarration(result.mostVoted, winners);
+			emit DayNarration(result.mostVoted);
 		} else if (hasStageEnded()) {
 			resetVoting();
 			emit VotingRestarted();

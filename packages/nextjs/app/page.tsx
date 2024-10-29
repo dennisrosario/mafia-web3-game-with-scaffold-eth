@@ -47,6 +47,28 @@ const Home: NextPage = () => {
 
   useScaffoldWatchContractEvent({
     contractName: "MafiaGame",
+    eventName: "GameStarted",
+    onLogs: logs => {
+      logs.map(log => {
+        console.log("📡 Game Started!");
+        notification.info("📡 Game Started!");
+      });
+    },
+  });
+
+  useScaffoldWatchContractEvent({
+    contractName: "MafiaGame",
+    eventName: "NightNarration",
+    onLogs: logs => {
+      logs.map(log => {
+        const { victim } = log.args as unknown as { victim: AddressType };
+        console.log("📡 NightNarration: Last night a person was killed by the assassins. The person is", { victim });
+      });
+    },
+  });
+
+  useScaffoldWatchContractEvent({
+    contractName: "MafiaGame",
     eventName: "VotingResult",
     onLogs: logs => {
       logs.map(log => {
@@ -62,7 +84,7 @@ const Home: NextPage = () => {
     onLogs: logs => {
       logs.map(log => {
         console.log("📡 Voting restarted due to the vote result is tie!");
-        notification.info("Voting restarted due to the vote result is tie!");
+        notification.info("📡 Voting restarted due to the vote result is tie!");
       });
     },
   });
@@ -72,9 +94,9 @@ const Home: NextPage = () => {
     eventName: "DayNarration",
     onLogs: logs => {
       logs.map(log => {
-        const { victim, winners } = log.args as unknown as { victim: AddressType; winners: AddressType[] };
+        const { victim } = log.args as unknown as { victim: AddressType };
         console.log(`📡 DayNarration event: Player ${victim} was killed by community vote.`);
-        notification.info(`📡 DayNarration event: Player ${victim} was killed by community vote.`);
+        notification.info(`📡 DayNarration: Player ${victim} was killed by community vote.`);
       });
     },
   });
@@ -85,7 +107,12 @@ const Home: NextPage = () => {
     onLogs: logs => {
       logs.map(log => {
         const { winners } = log.args;
-        console.log("📡 GameEnded event", winners);
+        console.log("📡 GameEnded:", winners);
+        notification.info(
+          `📡 Game Ended: Player ${winners?.map((winner, i) => (
+            <Address key={i} address={winner} disableAddressLink />
+          ))} have claimed their winning prize.`,
+        );
       });
     },
   });
@@ -179,12 +206,6 @@ const Home: NextPage = () => {
       }
     }
   }, [players, connectedAddress]);
-
-  useEffect(() => {
-    if (currentState === 2) {
-      notification.info("Game Started");
-    }
-  }, [currentState]);
 
   const availablePlayerAddresses = playerAddresses.filter(address => address !== connectedAddress);
   const availableModeratorAddresses = players
