@@ -45,4 +45,12 @@ contract Treasury is Ownable(msg.sender) {
 	function getBalance() external view returns (uint) {
 		return address(this).balance;
 	}
+
+	function resetBalances(
+		address[] memory playerAddresses
+	) external onlyMafiaGame {
+		for (uint i = 0; i < playerAddresses.length; i++) {
+			balances[playerAddresses[i]] = 0;
+		}
+	}
 }

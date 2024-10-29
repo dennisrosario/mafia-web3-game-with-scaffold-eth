@@ -9,14 +9,6 @@ contract MafiaGame {
 		Police,
 		Citizen
 	}
-
-	struct Player {
-		address playerAddress;
-		Role role;
-		bool isAlive;
-		bool hasVoted;
-	}
-
 	enum GameState {
 		Waiting,
 		AssigningRoles,
@@ -26,37 +18,44 @@ contract MafiaGame {
 		Finished
 	}
 
+	struct Player {
+		address playerAddress;
+		Role role;
+		bool isAlive;
+		bool hasVoted;
+	}
 	struct VoteResult {
 		address mostVoted;
 		uint highestVotes;
 		bool isTie;
 	}
 
+	Treasury public treasury;
+	GameState public currentState;
+
 	mapping(address => Player) public players;
+	mapping(address => uint) public votes;
 	address[] public playerAddresses;
 	address[] public winners;
-	GameState public currentState;
+
+	uint public totalVotes;
 	uint public startTime;
 	address public lastKilled;
-	Treasury public treasury;
-
-	mapping(address => uint) public votes;
-	uint public totalVotes;
 
 	event GameStarted();
 	event RoleAssigned(address indexed player, Role role);
-	event GameEnded(address[] winners);
-	event PlayerVoted(address indexed voter, address indexed target);
 	event NightNarration(address indexed killer, address indexed victim);
-	event DayNarration(address indexed victim, address[] winners);
+	event PlayerVoted(address indexed voter, address indexed target);
 	event VotingRestarted();
+	event DayNarration(address indexed victim, address[] winners);
 	event VotingResult(
 		address indexed mostVoted,
 		uint highestVotes,
 		bool isTie
 	);
-	event GameReset();
 	event PrizeClaimed(address indexed winner, uint amount);
+	event GameEnded(address[] winners);
+	event GameReset();
 
 	modifier onlyAlive() {
 		require(players[msg.sender].isAlive, "You are dead!");
@@ -269,11 +268,12 @@ contract MafiaGame {
 	}
 
 	function resetGame() private onlyInState(GameState.Finished) {
-		// Reset all player data and mappings
 		for (uint i = 0; i < playerAddresses.length; i++) {
 			delete players[playerAddresses[i]];
+			delete votes[playerAddresses[i]];
 		}
 
+		treasury.resetBalances(playerAddresses);
 		delete playerAddresses;
 		delete lastKilled;
 		delete totalVotes;
@@ -296,7 +296,7 @@ contract MafiaGame {
 		} else if (currentState == GameState.Day) {
 			return 60 seconds;
 		} else {
-			return 0; // No active stage
+			return 0;
 		}
 	}
 
