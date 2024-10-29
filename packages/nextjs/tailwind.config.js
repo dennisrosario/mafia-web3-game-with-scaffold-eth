@@ -76,7 +76,7 @@ module.exports = {
   },
   theme: {
     fontFamily: {
-      'fantasy': ['fantasy', 'Arial', 'sans-serif'],
+      fantasy: ["fantasy", "Arial", "sans-serif"],
     },
     extend: {
       boxShadow: {

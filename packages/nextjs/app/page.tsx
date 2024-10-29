@@ -16,6 +16,11 @@ import {
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
 
+type RefetchLastKilled = () => void;
+type RefetchCurrentState = () => void;
+type RefetchPlayers = () => void;
+type RefetchWinners = () => void;
+
 interface Player {
   playerAddress: AddressType;
   role: number;
@@ -26,7 +31,7 @@ interface Player {
 interface VoteResult {
   mostVoted: AddressType;
   highestVotes: number;
-  isTie: Boolean;
+  isTie: boolean;
 }
 
 const Home: NextPage = () => {
@@ -49,7 +54,7 @@ const Home: NextPage = () => {
     contractName: "MafiaGame",
     eventName: "GameStarted",
     onLogs: logs => {
-      logs.map(log => {
+      logs.map(() => {
         console.log("📡 Game Started!");
         notification.info("📡 Game Started!");
       });
@@ -82,7 +87,7 @@ const Home: NextPage = () => {
     contractName: "MafiaGame",
     eventName: "VotingRestarted",
     onLogs: logs => {
-      logs.map(log => {
+      logs.map(() => {
         console.log("📡 Voting restarted due to the vote result is tie!");
         notification.info("📡 Voting restarted due to the vote result is tie!");
       });
@@ -122,28 +127,28 @@ const Home: NextPage = () => {
     functionName: "getAllPlayers",
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
-  }) as { data: Player[]; refetch: Function };
+  }) as { data: Player[]; refetch: RefetchPlayers };
 
   const { data: winners, refetch: refetchWinners } = useReadContract({
     address: mafiaContract?.address,
     functionName: "getAllWinners",
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
-  }) as { data: AddressType[]; refetch: Function };
+  }) as { data: AddressType[]; refetch: RefetchWinners };
 
   const { data: currentState, refetch: refetchCurrentState } = useReadContract({
     address: mafiaContract?.address,
     functionName: "currentState",
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
-  }) as { data: number; refetch: Function };
+  }) as { data: number; refetch: RefetchCurrentState };
 
   const { data: lastKilled, refetch: refetchLastKilled } = useReadContract({
     address: mafiaContract?.address,
     functionName: "lastKilled",
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
-  }) as { data: AddressType; refetch: Function };
+  }) as { data: AddressType; refetch: RefetchLastKilled };
 
   const handleJoin = async () => {
     if (writeContractAsync && mafiaContract?.address) {

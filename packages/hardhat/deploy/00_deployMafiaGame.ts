@@ -64,7 +64,7 @@ const deployMafiaGame: DeployFunction = async function (hre: HardhatRuntimeEnvir
 
   console.log("MafiaGame deployed to:", mafiaGameDeployment.address);
   const mafiaGame = await hre.ethers.getContract<Contract>("MafiaGame", deployer);
-  console.log("👋 MafiaGame is ready for interaction");
+  console.log("👋 MafiaGame is ready for interaction: ", await mafiaGame.getAddress());
 
   const treasury = await hre.ethers.getContractAt("Treasury", treasuryDeployment.address);
   await treasury.setMafiaGameAddress(mafiaGameDeployment.address);

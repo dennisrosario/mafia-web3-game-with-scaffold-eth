@@ -7,12 +7,15 @@ import { CheckCircleIcon, DocumentCheckIcon } from "@heroicons/react/24/outline"
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { ContractName } from "~~/utils/scaffold-eth/contract";
 
+type RefetchLastKilled = () => void;
+type RefetchState = () => void;
+
 type SelectPlayerModalProps = {
   addresses: AddressType[];
   modalId: string;
   contractName: ContractName;
-  refetchState: Function;
-  refetchLastKilled: Function;
+  refetchState: RefetchState;
+  refetchLastKilled: RefetchLastKilled;
 };
 
 export const SelectPlayerModal = ({
