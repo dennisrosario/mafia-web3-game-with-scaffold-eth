@@ -27,15 +27,19 @@ const scaffoldConfig = {
     },
     {
       state: "Night",
-      desc: "Assasins’s turn - choose somebody to kill - 15 seconds.",
+      desc: "Assasins’s turn - choose somebody from dropdown list to kill.",
     },
     {
       state: "Day",
-      desc: "Voting to kill - choose somebody available from the dropdown list to kill.",
+      desc: "Voting to find out moderator - choose somebody available from the dropdown list to kill.",
+    },
+    {
+      state: "Finalizing",
+      desc: "The vote ended. Final winners are:",
     },
     {
       state: "Finished",
-      desc: "Check for winners.",
+      desc: "Wait for the winners claim their prize.",
     },
   ],
 

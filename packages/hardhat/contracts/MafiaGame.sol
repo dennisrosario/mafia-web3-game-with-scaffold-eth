@@ -30,7 +30,6 @@ contract MafiaGame {
 		address mostVoted;
 		uint highestVotes;
 		bool isTie;
-		uint[] voteCounts;
 	}
 
 	mapping(address => Player) public players;
@@ -46,18 +45,15 @@ contract MafiaGame {
 
 	event GameStarted();
 	event RoleAssigned(address indexed player, Role role);
-	event PlayerKilled(address indexed killedPlayer);
 	event GameEnded(address[] winners);
-	event AssassinAction(address indexed assassin, address indexed target);
 	event PlayerVoted(address indexed voter, address indexed target);
 	event NightNarration(address indexed killer, address indexed victim);
-	event DayNarration(address indexed victim);
+	event DayNarration(address indexed victim, address[] winners);
 	event VotingRestarted();
 	event VotingResult(
 		address indexed mostVoted,
 		uint highestVotes,
-		bool isTie,
-		uint[] voteCounts
+		bool isTie
 	);
 	event GameReset();
 	event PrizeClaimed(address indexed winner, uint amount);
@@ -148,8 +144,7 @@ contract MafiaGame {
 		lastKilled = target;
 		startTime = block.timestamp;
 		currentState = GameState.Day;
-		emit PlayerKilled(target);
-		emit AssassinAction(msg.sender, target);
+		emit NightNarration(msg.sender, target);
 	}
 
 	function voteToKill(
@@ -169,34 +164,28 @@ contract MafiaGame {
 	function checkVoteResult() private onlyAlive onlyInState(GameState.Day) {
 		VoteResult memory result = _tallyVotes();
 
-		if (!result.isTie && result.mostVoted != address(0)) {
+		if (!result.isTie && (totalVotes == 3 || hasStageEnded())) {
 			players[result.mostVoted].isAlive = false;
-			emit PlayerKilled(result.mostVoted);
-			emit DayNarration(result.mostVoted);
+			lastKilled = result.mostVoted;
+			currentState = GameState.Finalizing;
 			checkWinners();
+			emit DayNarration(result.mostVoted, winners);
 		} else if (hasStageEnded()) {
 			resetVoting();
 			emit VotingRestarted();
 		}
 
-		emit VotingResult(
-			result.mostVoted,
-			result.highestVotes,
-			result.isTie,
-			result.voteCounts
-		);
+		emit VotingResult(result.mostVoted, result.highestVotes, result.isTie);
 	}
 
 	function _tallyVotes() private view returns (VoteResult memory) {
 		VoteResult memory result;
 		uint highestVotes = 0;
 		bool isTie = false;
-		uint[] memory voteCounts = new uint[](playerAddresses.length - 1);
 
 		for (uint i = 0; i < playerAddresses.length; i++) {
 			address player = playerAddresses[i];
 			if (players[player].isAlive) {
-				voteCounts[i] = votes[player];
 				if (votes[player] > highestVotes) {
 					highestVotes = votes[player];
 					result.mostVoted = player;
@@ -209,7 +198,6 @@ contract MafiaGame {
 
 		result.highestVotes = highestVotes;
 		result.isTie = isTie;
-		result.voteCounts = voteCounts;
 		return result;
 	}
 
@@ -318,5 +306,13 @@ contract MafiaGame {
 			allPlayers[i] = players[playerAddresses[i]];
 		}
 		return allPlayers;
+	}
+
+	function getAllWinners() public view returns (address[] memory) {
+		address[] memory allWinners = new address[](winners.length);
+		for (uint256 i = 0; i < winners.length; i++) {
+			allWinners[i] = winners[i];
+		}
+		return allWinners;
 	}
 }

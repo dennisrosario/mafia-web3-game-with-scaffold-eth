@@ -27,7 +27,6 @@ interface VoteResult {
   mostVoted: AddressType;
   highestVotes: number;
   isTie: Boolean;
-  voteCounts: object;
 }
 
 const Home: NextPage = () => {
@@ -51,23 +50,31 @@ const Home: NextPage = () => {
     eventName: "VotingResult",
     onLogs: logs => {
       logs.map(log => {
-        const { mostVoted, highestVotes, isTie, voteCounts } = log.args as unknown as VoteResult;
-        console.log("📡 VotingResult event", mostVoted, highestVotes, isTie, voteCounts);
+        const { mostVoted, highestVotes, isTie } = log.args as unknown as VoteResult;
+        console.log("📡 VotingResult event", mostVoted, highestVotes, isTie);
       });
     },
   });
 
   useScaffoldWatchContractEvent({
     contractName: "MafiaGame",
-    eventName: "PlayerKilled",
+    eventName: "VotingRestarted",
     onLogs: logs => {
       logs.map(log => {
-        const { killedPlayer } = log.args;
-        console.log("📡 VotingResult event", killedPlayer);
+        console.log("📡 Voting restarted due to the vote result is tie!");
+        notification.info("Voting restarted due to the vote result is tie!");
+      });
+    },
+  });
 
-        if (currentState === 3) {
-          console.log(`Player ${killedPlayer} was killed by community vote.`);
-        }
+  useScaffoldWatchContractEvent({
+    contractName: "MafiaGame",
+    eventName: "DayNarration",
+    onLogs: logs => {
+      logs.map(log => {
+        const { victim, winners } = log.args as unknown as { victim: AddressType; winners: AddressType[] };
+        console.log(`📡 DayNarration event: Player ${victim} was killed by community vote.`);
+        notification.info(`📡 DayNarration event: Player ${victim} was killed by community vote.`);
       });
     },
   });
@@ -89,6 +96,13 @@ const Home: NextPage = () => {
     abi: mafiaContract?.abi,
     chainId: targetNetwork.id,
   }) as { data: Player[]; refetch: Function };
+
+  const { data: winners, refetch: refetchWinners } = useReadContract({
+    address: mafiaContract?.address,
+    functionName: "getAllWinners",
+    abi: mafiaContract?.abi,
+    chainId: targetNetwork.id,
+  }) as { data: AddressType[]; refetch: Function };
 
   const { data: currentState, refetch: refetchCurrentState } = useReadContract({
     address: mafiaContract?.address,
@@ -123,9 +137,27 @@ const Home: NextPage = () => {
     }
   };
 
+  const handleClaimPrize = async () => {
+    if (writeContractAsync && mafiaContract?.address) {
+      try {
+        const makeWriteWithParams = () =>
+          writeContractAsync({
+            address: mafiaContract?.address,
+            functionName: "claimPrize",
+            abi: mafiaContract?.abi,
+          });
+        await writeTxn(makeWriteWithParams);
+        refetchState();
+      } catch (e: any) {
+        console.error("⚡️ ~ file: page.tsx:handleClaimPrize ~ error", e);
+      }
+    }
+  };
+
   const refetchState = async () => {
     await refetchPlayers();
     await refetchCurrentState();
+    await refetchWinners();
   };
 
   const isAssassin = (_address: AddressType | undefined) => {
@@ -141,7 +173,6 @@ const Home: NextPage = () => {
       const addresses = players.map(player => player.playerAddress);
       setPlayerAddresses(addresses);
       addresses.includes(connectedAddress as string) ? setJoined(true) : setJoined(false);
-
       const connectedPlayer = players.find(player => player.playerAddress === connectedAddress);
       if (connectedPlayer) {
         setCurrentPlayer(connectedPlayer);
@@ -186,6 +217,23 @@ const Home: NextPage = () => {
                   <ArrowLeftEndOnRectangleIcon className="h-6 w-6" />
                 )}
                 JOIN GAME
+              </button>
+            </div>
+          )}
+
+          {joined && currentState === 4 && winners.includes(connectedAddress as string) && (
+            <div className="flex justify-center items-center space-x-2 flex-col sm:flex-row pt-10">
+              <button
+                className="h-10 btn btn-primary rounded-full btn-lg bg-base-100 hover:bg-secondary gap-1"
+                onClick={handleClaimPrize}
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <ArrowLeftEndOnRectangleIcon className="h-6 w-6" />
+                )}
+                ClaimPrize
               </button>
             </div>
           )}
@@ -257,6 +305,7 @@ const Home: NextPage = () => {
                     {lastKilled === currentPlayer.playerAddress && <span> (YOU)</span>}
                   </p>
                 )}
+                {joined && currentState === 4 && winners.map((winner, i) => <Address key={i} address={winner} />)}
               </div>
             </div>
           </div>

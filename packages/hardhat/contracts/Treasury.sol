@@ -38,12 +38,7 @@ contract Treasury is Ownable(msg.sender) {
 		uint amount
 	) external onlyMafiaGame {
 		require(address(this).balance >= amount, "Not enough funds");
-		require(
-			balances[recipient] >= amount,
-			"Recipient balance insufficient"
-		);
-
-		balances[recipient] -= amount;
+		balances[recipient] = 0;
 		recipient.transfer(amount);
 	}
 

@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     MafiaGame: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
       abi: [
         {
           inputs: [
@@ -26,27 +26,14 @@ const deployedContracts = {
             {
               indexed: true,
               internalType: "address",
-              name: "assassin",
-              type: "address",
-            },
-            {
-              indexed: true,
-              internalType: "address",
-              name: "target",
-              type: "address",
-            },
-          ],
-          name: "AssassinAction",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: true,
-              internalType: "address",
               name: "victim",
               type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "address[]",
+              name: "winners",
+              type: "address[]",
             },
           ],
           name: "DayNarration",
@@ -94,19 +81,6 @@ const deployedContracts = {
             },
           ],
           name: "NightNarration",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: true,
-              internalType: "address",
-              name: "killedPlayer",
-              type: "address",
-            },
-          ],
-          name: "PlayerKilled",
           type: "event",
         },
         {
@@ -193,12 +167,6 @@ const deployedContracts = {
               name: "isTie",
               type: "bool",
             },
-            {
-              indexed: false,
-              internalType: "uint256[]",
-              name: "voteCounts",
-              type: "uint256[]",
-            },
           ],
           name: "VotingResult",
           type: "event",
@@ -279,6 +247,19 @@ const deployedContracts = {
               internalType: "struct MafiaGame.Player[]",
               name: "",
               type: "tuple[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getAllWinners",
+          outputs: [
+            {
+              internalType: "address[]",
+              name: "",
+              type: "address[]",
             },
           ],
           stateMutability: "view",
@@ -464,7 +445,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     Treasury: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0x59b670e9fA9D0A427751Af201D676719a970857b",
       abi: [
         {
           inputs: [
